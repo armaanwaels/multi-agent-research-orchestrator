@@ -76,7 +76,7 @@ Models are set per role with `ORCH_PLANNER_MODEL`, `ORCH_WORKER_MODEL`, `ORCH_SY
 
 ## Evaluation
 
-Produced by this command on September 21, 2026, at the commit tagged `eval-2026-09-21`:
+Produced by this command on September 21, 2026, at the commit tagged `eval-v2-2026-09-21`:
 
 ```bash
 ORCH_PLANNER_MODEL=claude-sonnet-5 ORCH_WORKER_MODEL=claude-sonnet-5 \
@@ -86,31 +86,36 @@ uv run python evals/run_eval.py --budget 5.5
 
 32 tasks, all completed. Human review was auto-approved and web search used the fixture. Full output is in `results/eval_summary.md` (table) and `results/eval_results.jsonl` (every answer, plan, judge rationale and cost).
 
-| Metric | Result |
-|---|---|
-| Relevance: tasks the judge scored 4 or 5 out of 5 | 78% (25/32) |
-| Relevance: mean judge score | 4.28 / 5 |
-| Citation accuracy: citations whose evidence supports the sentence | 92% (258/281) |
-| Citations to evidence ids that do not exist | 0 |
-| Tasks where the agents used every source type the task needs | 28/32 |
-| Median time per task | 27 s |
-| Cost: system / judge / total | $2.00 / $0.83 / $2.83 |
+| Metric | Run 2 (current) | Run 1 |
+|---|---|---|
+| Relevance: tasks the judge scored 4 or 5 out of 5 | 94% (30/32) | 78% (25/32) |
+| Relevance: mean judge score | 4.59 / 5 | 4.28 / 5 |
+| Citation accuracy: citations whose evidence supports the sentence | 96% (291/303) | 92% (258/281) |
+| Citations to evidence ids that do not exist | 0 | 0 |
+| Tasks where the agents used every source type the task needs | 28/32 | 28/32 |
+| Median time per task | 22 s | 27 s |
+| Cost: system / judge / total | $1.90 / $0.82 / $2.72 | $2.00 / $0.83 / $2.83 |
 
-**How the tasks were made.** The 32 questions and reference answers in `evals/tasks.yaml` were written by Claude Code, the agent that built this repo, from the committed source snapshots. 22 need two or more source types. Every database number in a reference is listed with the SQL that produces it, and `uv run python evals/check_tasks.py` reruns all 43 checks (CI runs it too). I did not review each reference by hand, and one turned out to be wrong (below).
+**What changed between runs.** Run 1 (commit `eval-2026-09-21`, results in `results/eval-v1_*`) exposed three weak spots, fixed before run 2:
+
+1. The data agent assumed the database ended in 2023 and never queried 2024 or 2025. `describe_table` now reports the real year range, and the agent is told to query recent years instead of assuming they are missing.
+2. The planner did not know what the documents contained, so it skipped the EIA page that answers the geothermal question. It now gets a catalog of every source (document titles, table columns and year range, web fixture scope) built from the live tools at startup.
+3. Web search returned snippets only. A `read_article` tool now opens the full article.
+
+I also corrected one reference answer between runs (t19, see below). On the 31 tasks whose reference did not change, tasks scoring 4 or 5 went from 25 to 29.
+
+**How the tasks were made.** The 32 questions and reference answers in `evals/tasks.yaml` were written by Claude Code, the agent that built this repo, from the committed source snapshots. 22 need two or more source types. Every database number in a reference is listed with the SQL that produces it, and `uv run python evals/check_tasks.py` reruns all 43 checks (CI runs it too). I did not review each reference by hand. One was wrong in run 1: t19 took EIA's section heading ("electricity generation and space heating") as the main uses of natural gas, while the same page's numbers make industry the second-largest use. It was corrected before run 2.
 
 **How they are scored.** An LLM judge grades each answer against its reference on a 1-5 rubric (`evals/judge.py`). Citations are checked in two steps: code confirms the cited id exists, then the judge decides whether the cited evidence supports the sentence. The judge is the same model family as the system, which is a known source of bias.
 
-**The seven tasks that scored 3 or lower:**
+**Tasks that still score 3 or lower in run 2:**
 
-| Task | Score | Cause |
-|---|---|---|
-| t06 China nuclear, t20 India solar, t27 U.S. generation | 3, 2, 2 | The data agent filtered to years up to 2023 and reported that later data did not exist. The table runs to 2025. Nothing told the agent the year range. |
-| t11 geothermal | 2 | The planner sent only the search agent. The EIA page with the answer was never read. |
-| t22 Puerto Rico | 3 | The fact was past the 1,200-character cut-off of web search snippets, and the agent has no tool to open the full article. |
-| t16 offshore wind forecasting | 3 | Correct but less specific than the reference about which methods papers use. |
-| t19 LNG and gas uses | 3 | My reference was wrong. It took EIA's section heading ("electricity generation and space heating"), but the page's own numbers make industry the second-largest use, which is what the system said. |
+| Task | Run 1 | Run 2 | Cause |
+|---|---|---|---|
+| t05 largest U.S. wind farm | 5 | 2 | Regression. The planner told the search agent to use Wikipedia, which names an older record holder. The June 2026 EIA article on SunZia was in the web fixture but never searched. The catalog makes the planner name sources, and here it named the wrong one. |
+| t22 Puerto Rico outages | 3 | 3 | The search agent had `read_article` available but did not open the article, so the fact past the snippet cut-off was missed again. |
 
-With the default models (Opus 5 for every role), a two-task pilot scored 5 on both tasks at about $0.42 per task including the judge (`uv run python evals/run_eval.py --ids t05-sunzia t10-hydrogen --out pilot`, results in `results/pilot_summary.md`). Two tasks say little about quality; the full run used Sonnet 5 to stay inside a $5 budget.
+With the default models (Opus 5 for every role), a two-task pilot scored 5 on both tasks at about $0.42 per task including the judge (`uv run python evals/run_eval.py --ids t05-sunzia t10-hydrogen --out pilot`, results in `results/pilot_summary.md`, run before the fixes). Two tasks say little about quality; both full runs used Sonnet 5 to stay inside a $5 budget per run.
 
 ## Decisions and tradeoffs
 
@@ -123,11 +128,12 @@ With the default models (Opus 5 for every role), a two-task pilot scored 5 on bo
 
 ## What went wrong / limitations
 
-- **The data agent does not check the year range before querying.** Three of the seven low scores come from this. The fix is to put the actual range (2000 to 2025) in `describe_table` and in the agent's brief. It is not applied, so the numbers above describe the code that was evaluated.
-- **The planner does not know what the documents contain.** It skipped the documents agent for a geothermal question that an EIA page answers. Giving the planner the document list would fix this at the cost of a longer prompt.
-- **Web search returns snippets only.** There is no tool to read a full article, so facts deep in an article are missed.
-- **The web fixture is U.S.-centric.** Every article is from EIA, so questions about other countries get irrelevant web results, and the search agent spends turns finding that out.
-- **One of 32 references was wrong** (t19), and the others were not reviewed by a person. The relevance number should be read with that in mind.
+- **The first eval found three bugs.** The data agent assumed the database ended in 2023, the planner did not know what the documents contained, and web search could not read past a snippet. All three are fixed (see Evaluation), and the table shows both runs.
+- **The planner can steer a specialist to the wrong source.** In run 2 it sent a "largest wind farm" question to Wikipedia instead of the newer EIA article, and the score for that task fell from 5 to 2. The planner should say what to find, not where, and leave source choice to the specialist.
+- **Agents do not always use the tools they have.** `read_article` fixed nothing for t22 because the search agent never called it. Tool availability is not tool use; the brief or a check on thin evidence would have to push for it.
+- **The web fixture is U.S.-centric.** Every article is from EIA, so questions about other countries get irrelevant web results.
+- **Run-to-run variance was not measured.** Each configuration ran once. Some score changes between runs (t24 and t29 each dropped from 5 to 4 with no related change) are noise, so a few points of the 78% to 94% gain may be too.
+- **References were written by the same system family that answers, and one was wrong.** The others were not reviewed by a person. The relevance number should be read with that in mind.
 - **Steps run one after another.** Independent steps could run in parallel with LangGraph's `Send`.
 - **Human review is bypassed in the eval.** The interrupt, edit and resume paths are covered by tests and were run by hand against the real API, but the eval measures the system without a reviewer.
 - **The same model family writes and grades.** A judge from another provider, or a hand-graded sample, would make the relevance number more trustworthy.

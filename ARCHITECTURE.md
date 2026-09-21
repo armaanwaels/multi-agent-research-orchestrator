@@ -20,14 +20,14 @@ flowchart TD
 
 State lives in one `ResearchState` dict: the question, the plan, a step pointer, the evidence list, the agents' notes, reviewer feedback, and the answer. LangGraph checkpoints it after every node into PostgreSQL (`AsyncPostgresSaver`), keyed by a thread id.
 
-The supervisor is code, not a model call. It reads `plan[step_index]` and hands control to that specialist; when the plan is used up it goes to review. The planner decides what to do and the supervisor decides only when.
+The supervisor is code, not a model call. It reads `plan[step_index]` and hands control to that specialist; when the plan is used up it goes to review. The planner decides what to do and the supervisor decides only when. At startup the runtime builds a catalog of what each source holds (document titles, table columns and year range, web fixture scope) from the live tools, and the planner gets it in its system prompt.
 
 ## Agents and their contracts
 
 | Agent | Input | Tools | Output |
 |---|---|---|---|
-| planner | question, reviewer feedback if any, notes so far | none; structured output (JSON schema) | 1 to 4 steps, each `{agent, instruction}` |
-| search | question and one instruction | `web_search`, `wikipedia_search`, `wikipedia_page` | a short note citing evidence ids, plus new evidence |
+| planner | question, source catalog, reviewer feedback if any, notes so far | none; structured output (JSON schema) | 1 to 4 steps, each `{agent, instruction}` |
+| search | question and one instruction | `web_search`, `read_article`, `wikipedia_search`, `wikipedia_page` | a short note citing evidence ids, plus new evidence |
 | documents | question and one instruction | `list_docs`, `search_docs`, `read_doc` (MCP), `paper_search` (Qdrant) | same |
 | data | question and one instruction | `list_tables`, `describe_table`, `run_sql` (MCP) | same |
 | synthesizer | question, all evidence, notes, reviewer instruction | none | an answer where every claim carries `[E#]` citations |
@@ -67,7 +67,8 @@ The MCP server (`orchestrator.mcp_server`) runs as a subprocess over stdio. Beca
 ## What I would change
 
 - **Run independent steps in parallel.** The supervisor runs steps one after another even when they do not depend on each other. LangGraph's `Send` could fan them out and roughly halve latency for three-source questions.
-- **Give the web agent a live index.** The fixture holds only U.S.-focused EIA articles, so questions about other countries get irrelevant web results, and the search agent spends turns finding that out. A real search API with a recorded cache for the eval would fix both.
+- **Give the web agent a live index.** The fixture holds only U.S.-focused EIA articles, so questions about other countries get irrelevant web results. A real search API with a recorded cache for the eval would fix that.
+- **Let specialists pick their own sources.** The planner now sees a catalog of what each source contains, which helped fix four run-1 failures, but it also started naming sources in its instructions and once sent a question about a 2026 wind farm to Wikipedia instead of the newer web article. Instructions should say what to find, not where.
 - **Trim evidence before synthesis.** The synthesizer reads every evidence item in full, which is its biggest cost. Dropping items no agent note cites, or reranking them, would cut that without hiding anything the notes relied on.
 - **Let the supervisor react.** A cheap check after each step ("did this step find what it was asked for?") could trigger one targeted follow-up without waiting for a human rejection.
 - **Replace the in-repo judge with a held-out one.** The same model family writes and grades the answers. Spot-checking a sample by hand, or grading with a different model family, would make the relevance number more trustworthy.
