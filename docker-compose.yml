@@ -24,7 +24,7 @@ services:
   # Builds the SQLite database and indexes the arXiv abstracts into Qdrant, then exits.
   seed:
     build: .
-    command: ["orchestrator", "seed"]
+    command: ["seed"]  # the image entrypoint is `orchestrator`
     environment: &app_env
       QDRANT_URL: http://qdrant:6333
       POSTGRES_URL: postgresql://orchestrator:orchestrator@postgres:5432/orchestrator
