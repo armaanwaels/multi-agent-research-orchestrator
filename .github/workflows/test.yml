@@ -1,0 +1,28 @@
+name: test
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: orchestrator
+          POSTGRES_PASSWORD: orchestrator
+          POSTGRES_DB: orchestrator
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U orchestrator" --health-interval 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      # No API key in CI: every test stubs the LLM.
+      - run: uv run pytest -q
+      - name: Task references match the database
+        run: uv run python evals/check_tasks.py

@@ -2,16 +2,22 @@
 
 import sqlite3
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
+
+from orchestrator.sources.sql import build_database
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> int:
     tasks = yaml.safe_load((ROOT / "evals" / "tasks.yaml").read_text())
-    con = sqlite3.connect(ROOT / "data" / "energy.db")
+    # Build a fresh copy from the committed CSV so the check never depends on local state.
+    db = Path(tempfile.mkdtemp()) / "energy.db"
+    build_database(ROOT / "data" / "owid_energy.csv", db)
+    con = sqlite3.connect(db)
     failures, n = 0, 0
     for t in tasks:
         for c in t.get("checks", []):

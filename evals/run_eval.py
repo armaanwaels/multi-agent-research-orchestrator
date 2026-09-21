@@ -108,6 +108,7 @@ async def main() -> None:
     p.add_argument("--ids", nargs="*")
     p.add_argument("--concurrency", type=int, default=4)
     p.add_argument("--out", default="eval")
+    p.add_argument("--budget", type=float, default=6.0, help="stop starting new tasks past this spend (USD)")
     args = p.parse_args()
 
     tasks = yaml.safe_load((ROOT / "evals" / "tasks.yaml").read_text())
@@ -120,15 +121,23 @@ async def main() -> None:
     os.environ["WEB_SEARCH_BACKEND"] = "fixture"
     judge_llm = AnthropicLLM()
     sem = asyncio.Semaphore(args.concurrency)
+    spent = {"system": 0.0}
 
     async def guarded(t):
         async with sem:
+            total = spent["system"] + judge_llm.ledger.cost
+            if total >= args.budget:
+                print(f"{t['id']}: skipped, spend ${total:.2f} reached the ${args.budget:.2f} budget", flush=True)
+                return None
             try:
                 row = await run_task(t, settings, judge_llm)
             except Exception as exc:  # record the failure and keep going
                 print(f"{t['id']}: FAILED {exc!r}", flush=True)
                 return None
-            print(f"{t['id']}: relevance {row['relevance']}, cost ${row['system_cost_usd']:.3f}", flush=True)
+            spent["system"] += row["system_cost_usd"]
+            total = spent["system"] + judge_llm.ledger.cost
+            cost = row["system_cost_usd"]
+            print(f"{t['id']}: relevance {row['relevance']}, cost ${cost:.3f}, running total ${total:.2f}", flush=True)
             return row
 
     rows = [r for r in await asyncio.gather(*(guarded(t) for t in tasks)) if r]
@@ -139,7 +148,7 @@ async def main() -> None:
             f.write(json.dumps(r) + "\n")
     summary = summarize(rows, settings)
     if len(rows) < len(tasks):
-        summary = f"{len(tasks) - len(rows)} of {len(tasks)} tasks failed and are excluded.\n\n" + summary
+        summary = f"{len(tasks) - len(rows)} of {len(tasks)} tasks did not complete and are excluded.\n\n" + summary
     (RESULTS / f"{args.out}_summary.md").write_text(summary)
     print(summary)
 
