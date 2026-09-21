@@ -54,6 +54,9 @@ def local_tools(web, wikipedia, vectors) -> list[ToolSpec]:
     async def web_search(args):
         return json.dumps(await web.search(args["query"]))
 
+    async def read_article(args):
+        return json.dumps(await web.read(args["url"]))
+
     async def wikipedia_search(args):
         return json.dumps(await wikipedia.search(args["query"]))
 
@@ -69,6 +72,14 @@ def local_tools(web, wikipedia, vectors) -> list[ToolSpec]:
             f"Search the web for recent energy news and analysis (backend: {web.backend}).",
             _schema(query=("string", "Search query")),
             web_search,
+            "web",
+        ),
+        ToolSpec(
+            "read_article",
+            "Read the full text of a web article returned by web_search. Search results are short snippets; "
+            "read the article when the snippet stops before the detail you need.",
+            _schema(url=("string", "URL from a web_search result")),
+            read_article,
             "web",
         ),
         ToolSpec(
@@ -120,7 +131,7 @@ def _items(source: str, tool: str, args: dict[str, Any], raw: str) -> list[tuple
         return [(f"SQL: {args.get('sql_query', '')}", "owid-energy-data", json.dumps(data))]
     if tool == "read_doc":
         return [(data["doc_id"], "", data["text"])]
-    if tool == "wikipedia_page":
+    if tool in ("wikipedia_page", "read_article"):
         return [(data["title"], data["url"], data["text"])]
     if source == "docs":
         return [(h["section"], h["url"], h["text"]) for h in data]

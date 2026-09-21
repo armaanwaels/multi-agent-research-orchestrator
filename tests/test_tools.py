@@ -95,3 +95,28 @@ async def test_tool_errors_are_returned_to_the_model(db_path):
             ScriptedLLM(script), "m", toolbox, SPECIALISTS["data"], "q", "i", first_id=1, max_turns=3
         )
     assert evidence == [] and seen[0]["is_error"] is True
+
+
+def test_describe_reports_the_actual_year_range(db_path):
+    year = next(c for c in SqlStore(db_path).describe() if c["column"] == "year")
+    assert "2000 to 2025" in year["meaning"]
+
+
+async def test_read_article_returns_full_fixture_text():
+    web = FixtureWebSearch(DATA / "web_fixture.jsonl")
+    hit = (await web.search("Puerto Rico power interruptions", k=1))[0]
+    article = await web.read(hit["url"])
+    assert len(article["text"]) > len(hit["snippet"])
+    assert "23 hours" in article["text"]  # past the snippet cut-off; the eval task t22 needs it
+    with pytest.raises(KeyError):
+        await web.read("https://example.com/not-in-fixture")
+
+
+async def test_catalog_lists_documents_and_year_range(db_path):
+    from orchestrator.agents import build_catalog
+
+    async with mcp.Client(build_server(DATA / "docs", db_path)) as client:
+        catalog = await build_catalog(Toolbox(await mcp_tools(client)), "fixture")
+    assert "2000 to 2025" in catalog
+    assert "Geothermal" in catalog  # EIA page titles reach the planner
+    assert "No column for geothermal" in catalog

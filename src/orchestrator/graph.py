@@ -44,6 +44,8 @@ class Deps:
     settings: Settings
     # Evals and scripted runs approve automatically; the CLI leaves this False.
     auto_approve: bool = False
+    # What each source contains, built once at startup; goes into the planner's prompt.
+    catalog: str = ""
 
 
 def initial_state(question: str) -> ResearchState:
@@ -56,7 +58,12 @@ async def planner(state: ResearchState, runtime: Runtime[Deps]) -> dict[str, Any
     d = runtime.context
     with span("node.planner"):
         steps = await agents.plan(
-            d.llm, d.settings.planner_model, state["question"], state.get("feedback", ""), state.get("notes")
+            d.llm,
+            d.settings.planner_model,
+            state["question"],
+            state.get("feedback", ""),
+            state.get("notes"),
+            catalog=d.catalog,
         )
     return {"plan": steps, "step_index": 0}
 

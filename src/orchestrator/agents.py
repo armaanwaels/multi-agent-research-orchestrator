@@ -31,8 +31,9 @@ class Specialist:
 SPECIALISTS: dict[str, Specialist] = {
     "search": Specialist(
         "search",
-        ["web_search", "wikipedia_search", "wikipedia_page"],
-        "You search the web (recent energy news and analysis) and Wikipedia (background, definitions, history).",
+        ["web_search", "read_article", "wikipedia_search", "wikipedia_page"],
+        "You search the web (recent energy news and analysis) and Wikipedia (background, definitions, history). "
+        "Search results are short snippets; open an article with read_article when the detail you need is missing.",
     ),
     "documents": Specialist(
         "documents",
@@ -44,8 +45,10 @@ SPECIALISTS: dict[str, Specialist] = {
         "data",
         ["list_tables", "describe_table", "run_sql"],
         "You query a SQLite database of Our World in Data energy statistics: electricity generation "
-        "by source, shares, emissions and consumption by country and year, 2000 onward. "
-        "Always check column meanings with describe_table before your first query.",
+        "by source, shares, emissions and consumption by country and year. "
+        "Always call describe_table before your first query: it gives column meanings and the exact year range. "
+        "When a question asks about a recent year, query that year directly; do not assume data is missing "
+        "until a query returns no rows.",
     ),
 }
 
@@ -84,8 +87,37 @@ PLAN_SCHEMA = {
 }
 
 
+async def build_catalog(toolbox: Toolbox, web_backend: str) -> str:
+    """Describe what each source actually contains, from the live tools, for the planner's prompt."""
+    docs = json.loads((await toolbox.call("list_docs", {}))[0])
+    cols = json.loads((await toolbox.call("describe_table", {"table": "energy"}))[0])
+    years = next(c["meaning"] for c in cols if c["column"] == "year")
+    names = [c["column"] for c in cols]
+    absent = [x for x in ("geothermal", "biomass", "bioenergy") if not any(x in n for n in names)]
+    web = (
+        "40 EIA 'Today in Energy' articles from June to September 2026, mostly about U.S. energy markets"
+        if web_backend == "fixture"
+        else "live web search"
+    )
+    return (
+        "What the sources contain:\n"
+        f"- documents: EIA reference pages: {'; '.join(d['title'] for d in docs)}. "
+        "Also 242 arXiv abstracts on solar, wind, storage, hydrogen, nuclear and electricity markets.\n"
+        f"- data: table `energy`, {years.split(' (')[0].lower()}, one row per country or region per year. "
+        f"Columns: {', '.join(names)}."
+        + (f" No column for {', '.join(absent)}.\n" if absent else "\n")
+        + f"- search: web search over {web}; Wikipedia for everything else.\n"
+        "Use these ranges as given; do not tell a specialist that data may stop earlier."
+    )
+
+
 async def plan(
-    llm: LLM, model: str, question: str, feedback: str = "", gathered: list[str] | None = None
+    llm: LLM,
+    model: str,
+    question: str,
+    feedback: str = "",
+    gathered: list[str] | None = None,
+    catalog: str = "",
 ) -> list[Step]:
     prompt = f"Question: {question}"
     if gathered:
@@ -98,7 +130,7 @@ async def plan(
     resp = await llm.create(
         role="planner",
         model=model,
-        system=PLANNER_SYSTEM,
+        system=f"{PLANNER_SYSTEM}\n\n{catalog}" if catalog else PLANNER_SYSTEM,
         messages=[{"role": "user", "content": prompt}],
         output_config={"effort": "low", "format": {"type": "json_schema", "schema": PLAN_SCHEMA}},
     )

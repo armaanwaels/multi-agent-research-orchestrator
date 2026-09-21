@@ -10,7 +10,7 @@ TABLE = "energy"
 
 COLUMN_NOTES = {
     "country": "Country or aggregate region name (e.g. 'World', 'Europe', 'High-income countries')",
-    "year": "Calendar year, 2000 onward",
+    "year": "Calendar year",
     "iso_code": "ISO 3166 alpha-3 code; empty for aggregate regions",
     "population": "People",
     "electricity_generation": "Total electricity generation, TWh",
@@ -57,7 +57,14 @@ class SqlStore:
         cols = self.con.execute(f"PRAGMA table_info({table})").fetchall()
         if not cols:
             raise KeyError(f"unknown table {table!r}")
-        return [{"column": c[1], "type": c[2], "meaning": COLUMN_NOTES.get(c[1], "")} for c in cols]
+        notes = dict(COLUMN_NOTES)
+        if table == TABLE:
+            lo, hi = self.year_range()
+            notes["year"] = f"Calendar year, {lo} to {hi} (every year in between is present)"
+        return [{"column": c[1], "type": c[2], "meaning": notes.get(c[1], "")} for c in cols]
+
+    def year_range(self) -> tuple[int, int]:
+        return self.con.execute(f"SELECT MIN(year), MAX(year) FROM {TABLE}").fetchone()
 
     def query(self, sql: str) -> dict:
         statement = sql.strip().rstrip(";")

@@ -201,8 +201,10 @@
   reference: >-
     Global LNG trade rose 5.4% to a record 56.3 Bcf/d in 2025, driven largely by U.S. export growth; U.S. LNG
     exports rose 26% to 15.1 Bcf/d, the largest increase of any country, and EIA forecasts 17.4 Bcf/d in 2026.
-    In the United States, electricity generation and space heating are the main uses of natural gas, and Texas is
-    the largest consuming state (about 15.7% of U.S. consumption in 2023).
+    In the United States the electric power sector used about 40% of natural gas in 2023 and industry about 32%,
+    with residential and commercial space heating most of the rest; Texas is the largest consuming state (about
+    15.7% of U.S. consumption in 2023). (Corrected after the first eval run: the original reference named only
+    electricity and space heating, from the section heading.)
 
 - id: t20-india-solar
   question: How quickly has solar generation grown in India since 2015, and how does India's 2025 solar share compare with the world average?

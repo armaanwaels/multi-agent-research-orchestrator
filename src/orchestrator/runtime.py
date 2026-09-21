@@ -12,6 +12,7 @@ import mcp
 from langgraph.checkpoint.memory import InMemorySaver
 from qdrant_client import AsyncQdrantClient
 
+from .agents import build_catalog
 from .config import Settings
 from .graph import Deps
 from .llm import LLM, AnthropicLLM
@@ -63,10 +64,12 @@ async def open_runtime(
             runs: RunStore = await stack.enter_async_context(PostgresRunStore.connect(s.postgres_url))
         else:
             checkpointer, runs = InMemorySaver(), MemoryRunStore()
+        toolbox = Toolbox(tools, s.tool_result_chars)
         deps = Deps(
             llm=llm or AnthropicLLM(),
-            toolbox=Toolbox(tools, s.tool_result_chars),
+            toolbox=toolbox,
             settings=s,
             auto_approve=auto_approve,
+            catalog=await build_catalog(toolbox, s.web_search),
         )
         yield Runtime(deps, checkpointer, runs)

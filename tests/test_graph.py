@@ -111,3 +111,12 @@ async def test_auto_approve_runs_straight_through(db_path):
         runtime.deps.auto_approve = True
         done = await research(runtime, "q", "t4")
         assert done["status"] == "done" and done["evidence"]
+
+
+async def test_planner_prompt_carries_the_source_catalog(db_path):
+    async with scripted_runtime(db_path) as runtime:
+        runtime.deps.catalog = "What the sources contain: CATALOG-MARKER"
+        runtime.deps.auto_approve = True
+        await research(runtime, "q", "t5")
+        planner_system = next(kw["system"] for role, kw in runtime.deps.llm.requests if role == "planner")
+    assert "CATALOG-MARKER" in planner_system
