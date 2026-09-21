@@ -1,0 +1,52 @@
+[project]
+name = "orchestrator"
+version = "0.1.0"
+description = "Five LangGraph agents with MCP tools that search, retrieve, and synthesize across multiple sources, with human-in-the-loop review and an eval harness."
+readme = "README.md"
+authors = [{ name = "Armaan Waels" }]
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=1.7.0",
+    "fastembed>=0.8.0",
+    "httpx>=0.28.1",
+    "langgraph>=1.2.12",
+    "langgraph-checkpoint-postgres>=3.1.2",
+    "mcp>=2.2.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.44.0",
+    "opentelemetry-sdk>=1.44.0",
+    "psycopg[binary,pool]>=3.3.6",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.3",
+    "pyyaml>=6.0.3",
+    "qdrant-client>=1.19.1",
+]
+
+[project.optional-dependencies]
+live-web = ["ddgs>=9.0"]
+
+[project.scripts]
+orchestrator = "orchestrator.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "beautifulsoup4>=4.15.0",
+    "markdownify>=1.2.3",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.8",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,52 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    ports: ["6333:6333"]
+    volumes: [qdrant_data:/qdrant/storage]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 3s
+      retries: 20
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: orchestrator
+      POSTGRES_PASSWORD: orchestrator
+      POSTGRES_DB: orchestrator
+    ports: ["5433:5432"]  # 5433 on the host so a local Postgres on 5432 does not clash
+    volumes: [pg_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "orchestrator"]
+      interval: 3s
+      retries: 20
+
+  # Builds the SQLite database and indexes the arXiv abstracts into Qdrant, then exits.
+  seed:
+    build: .
+    command: ["orchestrator", "seed"]
+    environment: &app_env
+      QDRANT_URL: http://qdrant:6333
+      POSTGRES_URL: postgresql://orchestrator:orchestrator@postgres:5432/orchestrator
+      ORCH_SQLITE_PATH: /app/state/energy.db
+    volumes: [app_state:/app/state]
+    depends_on:
+      qdrant: {condition: service_healthy}
+
+  # Run questions with: docker compose run --rm app ask "..."
+  app:
+    build: .
+    profiles: ["cli"]
+    env_file: [{path: .env, required: false}]
+    environment: *app_env
+    volumes: [app_state:/app/state]
+    stdin_open: true
+    tty: true
+    depends_on:
+      seed: {condition: service_completed_successfully}
+      postgres: {condition: service_healthy}
+
+volumes:
+  qdrant_data:
+  pg_data:
+  app_state:

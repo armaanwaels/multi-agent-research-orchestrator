@@ -1,0 +1,339 @@
+# Synthesis tasks for the eval harness.
+#
+# Written by Claude Code (the agent that built this repo) from the committed source
+# snapshots in data/: numbers were read from the SQLite database, the EIA documents and
+# the EIA web fixture while writing each reference. Every database number is listed under
+# `checks` with the SQL that produces it; `python evals/check_tasks.py` reruns them.
+# Wikipedia facts used in references are limited to stable ones (definitions, dated events).
+#
+# sources: which source types a good answer needs (docs, sql, web, wikipedia, arxiv).
+
+- id: t01-us-nuclear-share
+  question: What share of U.S. electricity came from nuclear power in 2025, how does that compare with its long-run share, and why do nuclear plants run so much of the time?
+  sources: [sql, docs]
+  reference: >-
+    Nuclear supplied about 17.4% of U.S. electricity in 2025 (784.78 TWh), a little below the roughly 20% share
+    it has held since 1990 per EIA. Nuclear plants are run intensively for cost and technical reasons; their
+    average capacity factor in 2025 was 91%, higher than any other type of power plant.
+  checks:
+    - {sql: "SELECT nuclear_share_elec FROM energy WHERE country='United States' AND year=2025", expect: 17.363}
+    - {sql: "SELECT nuclear_electricity FROM energy WHERE country='United States' AND year=2025", expect: 784.78}
+
+- id: t02-ercot-peak
+  question: What record did ERCOT's hourly peak load set in July 2026, which resources met it, and why do electricity prices tend to be highest in summer?
+  sources: [web, docs]
+  reference: >-
+    ERCOT's hourly load peaked at a record 91.1 GW on July 22, 2026 at 6 p.m. CT, 6% above the previous record
+    of 85.5 GW from August 10, 2023, during a heat wave. Natural gas met about 48% and solar about 32% of that peak.
+    EIA explains that prices are usually highest in summer because total demand is high and more expensive
+    generation sources are brought on to meet it.
+
+- id: t03-battery-growth
+  question: How fast has U.S. utility-scale battery storage capacity grown recently, how much was operating at the end of 2025, and which older technology has historically provided most U.S. grid storage?
+  sources: [web, docs]
+  reference: >-
+    U.S. utility-scale battery capacity grew at an average of 70% a year over the last three years, reaching
+    43.6 GW at the end of 2025 and nearly 52 GW by mid-2026 after 8.3 GW more was added; operators plan about 54 GW
+    more over the next two and a half years. Historically most grid storage has been pumped-storage
+    hydroelectricity: about 22 GW across 40 systems in 18 states in 2022 (about 23.2 GW in 2025), mostly built in
+    the 1970s, with Bath County, Virginia (about 2,860 MW) the largest.
+
+- id: t04-caiso-solar
+  question: What happened between solar and natural gas generation in CAISO in early 2026, and how large was solar's share of total U.S. electricity in 2025?
+  sources: [web, sql]
+  reference: >-
+    In the first five months of 2026, utility-scale solar generated more electricity than natural gas in CAISO:
+    solar output rose 21% versus the same period of 2024 while gas generation fell 60%, and solar beat gas on
+    82% of days (up from 21% in 2024 and 2025). Nationally, solar supplied about 8.6% of U.S. electricity in 2025
+    (388.82 TWh), up from 6.9% in 2024.
+  checks:
+    - {sql: "SELECT solar_share_elec FROM energy WHERE country='United States' AND year=2025", expect: 8.603}
+    - {sql: "SELECT solar_electricity FROM energy WHERE country='United States' AND year=2025", expect: 388.82}
+    - {sql: "SELECT solar_share_elec FROM energy WHERE country='United States' AND year=2024", expect: 6.918}
+
+- id: t05-sunzia
+  question: What is the largest wind farm in the United States, how big is it, how does a wind turbine turn wind into electricity, and what share of U.S. electricity came from wind in 2025?
+  sources: [web, docs, sql]
+  reference: >-
+    SunZia in New Mexico, slated to start commercial operation in June 2026, has 3,650 MW of net summer capacity
+    from 916 turbines, more than three times the next largest (Alta Wind, 1,098 MW; Great Prairie, 1,027 MW), and
+    uses a high-voltage line to deliver power to Arizona and California. Wind flowing over the blades creates lift
+    that turns them; the blades drive a shaft connected to a generator. Wind supplied about 10.3% of U.S.
+    electricity in 2025 (464.39 TWh).
+  checks:
+    - {sql: "SELECT wind_share_elec FROM energy WHERE country='United States' AND year=2025", expect: 10.275}
+    - {sql: "SELECT wind_electricity FROM energy WHERE country='United States' AND year=2025", expect: 464.39}
+
+- id: t06-china-nuclear
+  question: How much has China's nuclear capacity and generation grown since 2016, and what share of China's electricity did nuclear provide in 2025?
+  sources: [web, sql]
+  reference: >-
+    EIA reports China's nuclear capacity rose 76% (24 GW) from 2016 to 2024, with 1.1 GW more added in 2025 and
+    2.2 GW in 2026 through May, and 36 reactors under construction, more than 49% of world nuclear construction.
+    Generation more than doubled from 213.18 TWh in 2016 to 487.61 TWh in 2025, yet nuclear was still only about
+    4.6% of China's electricity in 2025.
+  checks:
+    - {sql: "SELECT nuclear_electricity FROM energy WHERE country='China' AND year=2016", expect: 213.18}
+    - {sql: "SELECT nuclear_electricity FROM energy WHERE country='China' AND year=2025", expect: 487.61}
+    - {sql: "SELECT nuclear_share_elec FROM energy WHERE country='China' AND year=2025", expect: 4.607}
+
+- id: t07-uranium
+  question: How much uranium concentrate did the United States produce in 2025, and what steps turn mined uranium into reactor fuel?
+  sources: [web, docs]
+  reference: >-
+    U.S. production of uranium concentrate (U3O8, "yellowcake") was 2.1 million pounds in 2025, the most since
+    2017 and more than triple 2024. Mined ore is milled to extract U3O8, which then goes through conversion and
+    enrichment; enriched uranium is formed into fuel pellets assembled into fuel rods. Reactors use U-235 because
+    its atoms split easily, and it is relatively rare even though uranium is common.
+
+- id: t08-nyiso-solar
+  question: Why has midday metered electricity demand in New York been falling, and how much solar capacity has New York added since 2018?
+  sources: [web]
+  reference: >-
+    Growth in small-scale solar (rooftop and other PV under 1 MW, which utilities generally do not meter) reduces
+    the demand utilities see at midday, followed by a steeper rise in the late afternoon and evening. The effect is
+    strongest in March and April when demand is low and solar conditions are good. Total New York solar capacity
+    has grown by 5.6 GW since 2018.
+
+- id: t09-chpe-canada
+  question: What new transmission line lets New York import more electricity from Canada, and how much of Canada's electricity comes from hydropower?
+  sources: [web, sql]
+  reference: >-
+    The Champlain Hudson Power Express, between Quebec and New York City, began commercial operation in May 2026
+    after three years of construction; on July 3, 2026 NYISO imported 52 GWh from Canada, the most since January
+    2025. Hydropower supplied about 54% of Canada's electricity in 2024 (343.2 of 636.79 TWh), and renewables
+    about 64%.
+  checks:
+    - {sql: "SELECT hydro_electricity FROM energy WHERE country='Canada' AND year=2024", expect: 343.2}
+    - {sql: "SELECT electricity_generation FROM energy WHERE country='Canada' AND year=2024", expect: 636.79}
+    - {sql: "SELECT renewables_share_elec FROM energy WHERE country='Canada' AND year=2024", expect: 64.272}
+
+- id: t10-hydrogen
+  question: How is most hydrogen produced in the United States today, how does electrolysis differ, and what do research papers identify as drivers of electrolytic hydrogen cost?
+  sources: [docs, arxiv]
+  reference: >-
+    Nearly all commercial U.S. hydrogen comes from steam-methane reforming, in which high-temperature steam reacts
+    with methane (usually from natural gas) over a catalyst, producing hydrogen, carbon monoxide and some CO2.
+    Electrolysis splits water with electricity and emits only hydrogen and oxygen, though its footprint depends on
+    the grid mix. arXiv work on electrolysis cost points to electricity price and scheduling, plant utilization,
+    stack degradation and replacement, and location as the main cost drivers.
+
+- id: t11-geothermal
+  question: Which countries lead geothermal electricity, and which country gets the largest share of its electricity from geothermal?
+  sources: [docs]
+  reference: >-
+    EIA reports that in 2022, 25 countries generated about 92 billion kWh of geothermal electricity. Indonesia
+    produced the most, about 17 BkWh (about 5% of its generation). Kenya, seventh by volume at about 5 BkWh, had
+    the largest share: about 43% of its electricity.
+
+- id: t12-biomass
+  question: How much of U.S. energy came from biomass in 2025, and what were the main types?
+  sources: [docs]
+  reference: >-
+    Biomass was about 5% of U.S. energy consumption in 2025, about 4,853 trillion Btu: biofuels 2,569 TBtu (53%),
+    wood and wood waste 1,912 TBtu (39%), and municipal solid waste, manure and sewage 372 TBtu (8%). Industry was
+    the largest consuming sector (48%), followed by transportation (35%).
+
+- id: t13-germany-coal
+  question: How much did coal's share of Germany's electricity fall between 2015 and 2025, and what major policy change affected Germany's low-carbon supply in 2023?
+  sources: [sql, wikipedia]
+  reference: >-
+    Coal's share fell from about 42.6% in 2015 (272.2 TWh) to about 20.6% in 2025 (103.15 TWh). In April 2023
+    Germany shut its last three nuclear reactors, completing the nuclear phase-out that is part of the
+    Energiewende.
+  checks:
+    - {sql: "SELECT coal_share_elec FROM energy WHERE country='Germany' AND year=2015", expect: 42.586}
+    - {sql: "SELECT coal_share_elec FROM energy WHERE country='Germany' AND year=2025", expect: 20.611}
+    - {sql: "SELECT coal_electricity FROM energy WHERE country='Germany' AND year=2025", expect: 103.15}
+
+- id: t14-uk-coal
+  question: What happened to coal-fired electricity in the United Kingdom between 2015 and 2025, and when did its last coal plant close?
+  sources: [sql, wikipedia]
+  reference: >-
+    Coal fell from about 22.4% of UK electricity in 2015 (75.88 TWh) to about 0.1% in 2025 (0.33 TWh). The UK's
+    last coal-fired power station, Ratcliffe-on-Soar, closed on 30 September 2024.
+  checks:
+    - {sql: "SELECT coal_share_elec FROM energy WHERE country='United Kingdom' AND year=2015", expect: 22.392}
+    - {sql: "SELECT coal_share_elec FROM energy WHERE country='United Kingdom' AND year=2025", expect: 0.113}
+
+- id: t15-perovskite
+  question: How efficient are commercial solar panels today, and what do research papers suggest about the efficiency potential of perovskite solar cells?
+  sources: [docs, arxiv]
+  reference: >-
+    EIA says commercial PV panel efficiency averaged under 10% in the mid-1980s, about 15% by 2015, and is
+    approaching 25% for state-of-the-art modules, with experimental and niche cells near 50%. arXiv papers model
+    single-junction perovskite limits around 30-31% and report perovskite/silicon tandems approaching 30%, while
+    noting losses from recombination and real outdoor conditions.
+
+- id: t16-offshore-wind-forecast
+  question: What approaches are researchers using to forecast offshore wind power, and why does forecast accuracy matter for grid operation?
+  sources: [arxiv]
+  reference: >-
+    Recent arXiv work uses transfer learning across meteorological clusters, spatio-temporal deep learning over
+    many turbines or farms, and satellite scatterometer data to forecast offshore winds. Better forecasts reduce
+    reserve and balancing needs and improve the economics and reliability of bulk grid operation.
+
+- id: t17-smr-vogtle
+  question: What was the most recent large nuclear reactor completed in the United States, and what does research say about small modular reactors as an alternative?
+  sources: [docs, arxiv]
+  reference: >-
+    Vogtle Unit 4 in Georgia was completed in early 2024, making Vogtle the largest U.S. nuclear plant with four
+    reactors and 4,530 MW of net summer capacity. arXiv papers describe SMRs as compact reactors (typically under
+    300 MWe) with passive safety and modular, on-site assembly, offering more flexibility and lower capital cost
+    than large reactors; recent reviews also note interest in SMRs for powering data centers.
+
+- id: t18-carbon-intensity
+  question: Compare the carbon intensity of electricity in Poland and Sweden in 2024 and explain the difference.
+  sources: [sql]
+  reference: >-
+    In 2024 Poland's grid emitted about 608 gCO2/kWh against about 35 gCO2/kWh for Sweden, roughly 17 times more.
+    Fossil fuels made up about 68.9% of Poland's generation, while Sweden's fossil share was about 1.2%, with
+    renewables at about 69% and the remainder mostly nuclear.
+  checks:
+    - {sql: "SELECT carbon_intensity_elec FROM energy WHERE country='Poland' AND year=2024", expect: 608.18}
+    - {sql: "SELECT carbon_intensity_elec FROM energy WHERE country='Sweden' AND year=2024", expect: 34.91}
+    - {sql: "SELECT fossil_share_elec FROM energy WHERE country='Poland' AND year=2024", expect: 68.853}
+    - {sql: "SELECT renewables_share_elec FROM energy WHERE country='Sweden' AND year=2024", expect: 69.358}
+
+- id: t19-lng
+  question: How did global LNG trade and U.S. LNG exports change in 2025, and what are the main uses of natural gas in the United States?
+  sources: [web, docs]
+  reference: >-
+    Global LNG trade rose 5.4% to a record 56.3 Bcf/d in 2025, driven largely by U.S. export growth; U.S. LNG
+    exports rose 26% to 15.1 Bcf/d, the largest increase of any country, and EIA forecasts 17.4 Bcf/d in 2026.
+    In the United States, electricity generation and space heating are the main uses of natural gas, and Texas is
+    the largest consuming state (about 15.7% of U.S. consumption in 2023).
+
+- id: t20-india-solar
+  question: How quickly has solar generation grown in India since 2015, and how does India's 2025 solar share compare with the world average?
+  sources: [sql]
+  reference: >-
+    India's solar generation rose from about 7.09 TWh in 2015 (0.5% of its electricity) to about 196 TWh in 2025
+    (9.4%), a roughly 28-fold increase. The world average solar share in 2025 was about 8.7%, so India was slightly
+    above it.
+  checks:
+    - {sql: "SELECT solar_electricity FROM energy WHERE country='India' AND year=2015", expect: 7.09}
+    - {sql: "SELECT solar_electricity FROM energy WHERE country='India' AND year=2025", expect: 195.99}
+    - {sql: "SELECT solar_share_elec FROM energy WHERE country='India' AND year=2025", expect: 9.415}
+    - {sql: "SELECT solar_share_elec FROM energy WHERE country='World' AND year=2025", expect: 8.745}
+
+- id: t21-world-solar-wind
+  question: Did solar overtake wind in global electricity generation, and when?
+  sources: [sql]
+  reference: >-
+    Yes. Wind generated more than solar worldwide through 2024 (2,509.5 TWh wind vs 2,142.65 TWh solar), but in
+    2025 solar produced about 2,778.64 TWh against 2,713.14 TWh from wind, so 2025 is the first year solar led.
+  checks:
+    - {sql: "SELECT solar_electricity FROM energy WHERE country='World' AND year=2025", expect: 2778.64}
+    - {sql: "SELECT wind_electricity FROM energy WHERE country='World' AND year=2025", expect: 2713.14}
+    - {sql: "SELECT wind_electricity FROM energy WHERE country='World' AND year=2024", expect: 2509.5}
+    - {sql: "SELECT solar_electricity FROM energy WHERE country='World' AND year=2024", expect: 2142.65}
+
+- id: t22-puerto-rico
+  question: How long were power interruptions in Puerto Rico in 2025, excluding major events, and how does that compare with recent years?
+  sources: [web]
+  reference: >-
+    Excluding major events such as hurricanes, Puerto Rico customers averaged 36 hours of interruptions in 2025
+    (SAIDI), 19% more than in 2024. From 2021 to 2025 the average was about 29 hours a year, against about two
+    hours a year for mainland U.S. customers. Major events added another 23 hours in 2025.
+
+- id: t23-pumped-storage
+  question: Where is U.S. pumped-storage hydro capacity concentrated, and why do most pumped-storage plants have negative net generation?
+  sources: [docs]
+  reference: >-
+    The United States had about 23,156 MW of pumped-storage capacity in 18 states in 2025; the top five states held
+    61%: California 17%, Virginia 14%, South Carolina 13%, Michigan 9%, Georgia 8%. Most plants use more
+    electricity pumping water uphill than they later generate, so their annual net generation is negative.
+
+- id: t24-norway-hydro
+  question: What share of Norway's electricity comes from hydropower, and how does a hydroelectric plant generate power?
+  sources: [sql, docs]
+  reference: >-
+    Hydropower supplied about 89% of Norway's electricity in 2024 (139.55 of 157.11 TWh), with renewables about
+    98.6% in total. Hydroelectric plants use moving or falling water to spin turbines that drive generators, and
+    their output depends on precipitation that refills the reservoirs.
+  checks:
+    - {sql: "SELECT hydro_electricity FROM energy WHERE country='Norway' AND year=2024", expect: 139.55}
+    - {sql: "SELECT electricity_generation FROM energy WHERE country='Norway' AND year=2024", expect: 157.11}
+
+- id: t25-capacity-factor
+  question: What is a capacity factor, and how does nuclear's capacity factor compare with other U.S. power plants?
+  sources: [wikipedia, docs]
+  reference: >-
+    Capacity factor is the ratio of a plant's actual electricity output over a period to the maximum it could have
+    produced running at full nameplate capacity for that whole period. U.S. nuclear plants averaged a 91% capacity
+    factor in 2025, higher than any other type of power plant, because for cost and technical reasons they run
+    more intensively than coal or gas plants.
+
+- id: t26-brazil-hydro
+  question: How dependent is Brazil's electricity on hydropower, and why does hydro generation vary from year to year?
+  sources: [sql, docs]
+  reference: >-
+    Hydropower made up about 55% of Brazil's electricity in 2024 (413.21 of 745.72 TWh), and renewables about 87%.
+    Hydro output varies with precipitation, which changes seasonally and year to year, so dry years cut hydro
+    generation.
+  checks:
+    - {sql: "SELECT hydro_electricity FROM energy WHERE country='Brazil' AND year=2024", expect: 413.21}
+    - {sql: "SELECT renewables_share_elec FROM energy WHERE country='Brazil' AND year=2024", expect: 87.333}
+
+- id: t27-us-generation-mix
+  question: What were the leading sources of U.S. utility-scale electricity generation in 2025, and how much did total U.S. generation grow from 2020 to 2025?
+  sources: [docs, sql]
+  reference: >-
+    EIA reports about 4.43 trillion kWh of U.S. utility-scale generation in 2025, with fossil fuels about 58% and
+    natural gas the largest single source at about 41%. In the OWID data, total U.S. generation (including
+    small-scale) rose from about 4,043 TWh in 2020 to about 4,520 TWh in 2025, roughly 12%.
+  checks:
+    - {sql: "SELECT electricity_generation FROM energy WHERE country='United States' AND year=2020", expect: 4043.18}
+    - {sql: "SELECT electricity_generation FROM energy WHERE country='United States' AND year=2025", expect: 4519.79}
+
+- id: t28-iceland
+  question: Why does Iceland have one of the cleanest electricity supplies in the world? Give its carbon intensity and the sources it relies on.
+  sources: [sql, wikipedia]
+  reference: >-
+    Iceland generated essentially all its electricity from renewables in 2024 (100% renewable, 0% fossil), with a
+    carbon intensity of about 28 gCO2/kWh. Its electricity comes from hydropower (the majority) and geothermal
+    energy.
+  checks:
+    - {sql: "SELECT carbon_intensity_elec FROM energy WHERE country='Iceland' AND year=2024", expect: 27.82}
+    - {sql: "SELECT renewables_share_elec FROM energy WHERE country='Iceland' AND year=2024", expect: 100.0}
+
+- id: t29-storage-and-renewables-research
+  question: How is U.S. battery storage growing, and what do research papers propose for operating batteries on grids with high renewable penetration?
+  sources: [web, arxiv]
+  reference: >-
+    U.S. utility-scale battery capacity reached 43.6 GW at the end of 2025 after averaging 70% annual growth over
+    three years, and nearly 52 GW by mid-2026. arXiv papers propose scheduling and control methods for batteries on
+    high-renewable grids, including chance-constrained operation under uncertainty, weather-driven charging
+    priorities, and optimal scheduling alongside renewables.
+
+- id: t30-renewable-markets
+  question: What challenges do electricity markets face as renewable penetration grows, according to research, and what example of this shows up in California's 2026 generation data?
+  sources: [arxiv, web]
+  reference: >-
+    arXiv papers describe price volatility and forecasting difficulty, the need for new contract and two-stage
+    market designs, and price distortions that hinder renewable integration. In CAISO, utility-scale solar
+    out-generated natural gas on 82% of days in the first five months of 2026 (up from 21%), as gas generation
+    fell 60% against the same period of 2024.
+
+- id: t31-china-solar-share
+  question: What share of the world's solar electricity did China generate in 2025, and how large was solar within China's own electricity mix?
+  sources: [sql]
+  reference: >-
+    China generated about 1,175 TWh of solar electricity in 2025 out of about 2,779 TWh worldwide, roughly 42%.
+    Solar was about 11.1% of China's electricity in 2025, up from 0.7% in 2015.
+  checks:
+    - {sql: "SELECT solar_electricity FROM energy WHERE country='China' AND year=2025", expect: 1174.96}
+    - {sql: "SELECT solar_share_elec FROM energy WHERE country='China' AND year=2025", expect: 11.102}
+    - {sql: "SELECT solar_share_elec FROM energy WHERE country='China' AND year=2015", expect: 0.679}
+
+- id: t32-france-nuclear
+  question: How much of France's electricity came from nuclear power in 2024 and 2025, and how does France rank globally for nuclear share?
+  sources: [sql, docs]
+  reference: >-
+    Nuclear supplied about 67.7% of France's electricity in 2024 (380.45 TWh) and about 68.8% in 2025
+    (392.07 TWh). EIA notes France has the world's highest nuclear share of national generation (about 68% in 2021)
+    and the second-largest nuclear capacity after the United States.
+  checks:
+    - {sql: "SELECT nuclear_share_elec FROM energy WHERE country='France' AND year=2024", expect: 67.722}
+    - {sql: "SELECT nuclear_share_elec FROM energy WHERE country='France' AND year=2025", expect: 68.787}
