@@ -54,7 +54,7 @@ docker compose up -d        # Qdrant, PostgreSQL, and a one-shot seed job
 docker compose run --rm app ask "How did Germany's coal share of electricity change between 2015 and 2025?"
 ```
 
-The image builds in about 30 seconds on a laptop with a warm Docker cache, and seeding takes about 30 more. `ask` stops at the review step and shows the plan, the agents' notes and every evidence item:
+From a fresh clone on an Apple M3 Pro, `docker compose up -d` had the stores seeded in 26 seconds with Docker's build cache warm; a cold build also pulls the base images, which I did not time. The example question then took 56 seconds and cost $0.20 on the default models. Without `--auto-approve`, `ask` stops at the review step and shows the plan, the agents' notes and every evidence item:
 
 ```
 [a]pprove  [e]dit  [r]eject  [q]uit and resume later >
