@@ -1,9 +1,10 @@
 # Synthesis tasks for the eval harness.
 #
-# Written by Claude Code (the agent that built this repo) from the committed source
-# snapshots in data/: numbers were read from the SQLite database, the EIA documents and
-# the EIA web fixture while writing each reference. Every database number is listed under
-# `checks` with the SQL that produces it; `python evals/check_tasks.py` reruns them.
+# Written from the committed source snapshots in data/: numbers were read from the
+# SQLite database, the EIA documents and the EIA web fixture while writing each
+# reference. The references were not reviewed line by line. Every database number is
+# listed under `checks` with the SQL that produces it; `python evals/check_tasks.py`
+# reruns them.
 # Wikipedia facts used in references are limited to stable ones (definitions, dated events).
 #
 # sources: which source types a good answer needs (docs, sql, web, wikipedia, arxiv).
