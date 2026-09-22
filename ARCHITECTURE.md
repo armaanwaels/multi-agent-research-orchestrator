@@ -46,7 +46,7 @@ The three specialists share one loop (`agents.run_specialist`): at most five mod
 | 4 | Wikipedia | live API | Background and definitions |
 | 5 | 242 arXiv abstracts | Qdrant, embedded with `BAAI/bge-small-en-v1.5` | Research questions are phrased differently from paper titles, so this one is semantic search |
 
-The MCP server (`orchestrator.mcp_server`) runs as a subprocess over stdio. Because it is a normal MCP server, the same docs and database tools work from Claude Desktop or Claude Code without this repo's agents.
+The MCP server (`orchestrator.mcp_server`) runs as a subprocess over stdio. Because it is an ordinary MCP server, the same docs and database tools work from any MCP host without this repo's agents.
 
 ## Decisions
 

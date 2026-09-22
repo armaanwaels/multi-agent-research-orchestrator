@@ -1,7 +1,7 @@
 """MCP server exposing the markdown docs and the SQLite database as tools.
 
 Agents reach these through an MCP client over stdio (`python -m orchestrator.mcp_server`),
-so the same server also works from Claude Desktop, Claude Code or any other MCP host.
+so the same server also works from any other MCP host.
 """
 
 from __future__ import annotations
