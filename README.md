@@ -6,7 +6,7 @@ Five LangGraph agents that plan, search, retrieve and synthesize answers across 
 
 A research question usually needs more than one source: a number from a database, an explanation from reference docs, a recent development from the news, background from an encyclopedia, a pointer into the literature. One RAG call over one index does not cover that, and an answer that hides where each claim came from is hard to check. I split the work across specialist agents with narrow tool sets, turned every retrieved item into a citable piece of evidence, put a person in front of the evidence before the answer is written, and measured the result.
 
-The domain is energy, because it has public sources of every kind: EIA reference pages and articles (U.S. government work, public domain), Our World in Data statistics (CC BY 4.0), arXiv abstracts (CC0 metadata) and Wikipedia.
+The domain is energy, which has public sources of every kind: EIA reference pages and articles (U.S. government work, public domain), Our World in Data statistics (CC BY 4.0), arXiv abstracts (CC0 metadata) and Wikipedia.
 
 ## Architecture
 
